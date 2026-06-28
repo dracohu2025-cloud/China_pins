@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
-"""Bake a georeferenced China relief image from public Terrarium DEM tiles."""
+"""Bake georeferenced China relief raster tiles from public Terrarium DEM tiles."""
 
 from __future__ import annotations
 
-import io
 import json
 import math
-import os
 import urllib.request
 from pathlib import Path
 
@@ -15,11 +13,11 @@ from PIL import Image, ImageDraw, ImageFilter
 
 
 ROOT = Path(__file__).resolve().parents[1]
-OUT = ROOT / "assets" / "china-relief-baked.webp"
+OUT_DIR = ROOT / "tiles" / "relief"
 CACHE = ROOT / ".cache" / "terrarium"
 CHINA_GEOJSON = ROOT / "geo" / "100000_full.json"
 
-ZOOM = 6
+ZOOMS = range(2, 7)
 TILE_SIZE = 256
 WEST, NORTH, EAST, SOUTH = 67.5, 55.77657301866769, 140.625, 16.636191878397664
 TERRARIUM_URL = "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"
@@ -37,12 +35,12 @@ def lat_to_tile_y(lat: float, zoom: int) -> float:
     return (1.0 - math.asinh(math.tan(lat_rad)) / math.pi) / 2.0 * (2**zoom)
 
 
-def lon_to_px(lon: float, x0: int) -> float:
-    return (lon_to_tile_x(lon, ZOOM) - x0) * TILE_SIZE
+def lon_to_px(lon: float, zoom: int, x0: int) -> float:
+    return (lon_to_tile_x(lon, zoom) - x0) * TILE_SIZE
 
 
-def lat_to_px(lat: float, y0: int) -> float:
-    return (lat_to_tile_y(lat, ZOOM) - y0) * TILE_SIZE
+def lat_to_px(lat: float, zoom: int, y0: int) -> float:
+    return (lat_to_tile_y(lat, zoom) - y0) * TILE_SIZE
 
 
 def tile_path(z: int, x: int, y: int) -> Path:
@@ -102,7 +100,7 @@ def hillshade(elevation: np.ndarray) -> np.ndarray:
     return shaded
 
 
-def draw_land_mask(width: int, height: int, x0: int, y0: int) -> Image.Image:
+def draw_land_mask(width: int, height: int, zoom: int, x0: int, y0: int) -> Image.Image:
     mask = Image.new("L", (width, height), 0)
     draw = ImageDraw.Draw(mask)
     data = json.loads(CHINA_GEOJSON.read_text())
@@ -116,10 +114,10 @@ def draw_land_mask(width: int, height: int, x0: int, y0: int) -> Image.Image:
         for polygon in polygons:
             if not polygon:
                 continue
-            outer = [(lon_to_px(lon, x0), lat_to_px(lat, y0)) for lon, lat in polygon[0]]
+            outer = [(lon_to_px(lon, zoom, x0), lat_to_px(lat, zoom, y0)) for lon, lat in polygon[0]]
             draw.polygon(outer, fill=255)
             for hole in polygon[1:]:
-                pts = [(lon_to_px(lon, x0), lat_to_px(lat, y0)) for lon, lat in hole]
+                pts = [(lon_to_px(lon, zoom, x0), lat_to_px(lat, zoom, y0)) for lon, lat in hole]
                 draw.polygon(pts, fill=0)
     return mask.filter(ImageFilter.GaussianBlur(0.35))
 
@@ -130,24 +128,29 @@ def add_paper_texture(rgb: np.ndarray) -> np.ndarray:
     return np.clip(rgb + grain[:, :, None] * 1.3, 0, 255)
 
 
-def main() -> None:
-    x0 = math.floor(lon_to_tile_x(WEST, ZOOM))
-    x1 = math.ceil(lon_to_tile_x(EAST, ZOOM))
-    y0 = math.floor(lat_to_tile_y(NORTH, ZOOM))
-    y1 = math.ceil(lat_to_tile_y(SOUTH, ZOOM))
+def tile_range(zoom: int) -> tuple[int, int, int, int]:
+    x0 = math.floor(lon_to_tile_x(WEST, zoom))
+    x1 = math.ceil(lon_to_tile_x(EAST, zoom))
+    y0 = math.floor(lat_to_tile_y(NORTH, zoom))
+    y1 = math.ceil(lat_to_tile_y(SOUTH, zoom))
+    return x0, x1, y0, y1
+
+
+def render_zoom(zoom: int) -> tuple[Image.Image, int, int, int, int]:
+    x0, x1, y0, y1 = tile_range(zoom)
     width = (x1 - x0) * TILE_SIZE
     height = (y1 - y0) * TILE_SIZE
 
     elevation = np.zeros((height, width), dtype=np.float32)
     for x in range(x0, x1):
         for y in range(y0, y1):
-            tile = fetch_tile(ZOOM, x, y)
+            tile = fetch_tile(zoom, x, y)
             elev = decode_terrarium(tile)
             px = (x - x0) * TILE_SIZE
             py = (y - y0) * TILE_SIZE
             elevation[py : py + TILE_SIZE, px : px + TILE_SIZE] = elev
 
-    land_mask = np.asarray(draw_land_mask(width, height, x0, y0)).astype(np.float32) / 255.0
+    land_mask = np.asarray(draw_land_mask(width, height, zoom, x0, y0)).astype(np.float32) / 255.0
     shade = hillshade(elevation)
     land = colorize(elevation)
     land = land * (0.72 + shade[:, :, None] * 0.38)
@@ -157,8 +160,31 @@ def main() -> None:
     rgb = add_paper_texture(rgb)
 
     image = Image.fromarray(np.clip(rgb, 0, 255).astype(np.uint8), "RGB")
-    image.save(OUT, quality=88, method=6)
-    print(f"Wrote {OUT} ({width}x{height}) from z{ZOOM} tiles x{x0}-{x1 - 1}, y{y0}-{y1 - 1}")
+    return image, x0, x1, y0, y1
+
+
+def write_tiles(image: Image.Image, zoom: int, x0: int, x1: int, y0: int, y1: int) -> int:
+    count = 0
+    for x in range(x0, x1):
+        for y in range(y0, y1):
+            left = (x - x0) * TILE_SIZE
+            top = (y - y0) * TILE_SIZE
+            tile = image.crop((left, top, left + TILE_SIZE, top + TILE_SIZE))
+            path = OUT_DIR / str(zoom) / str(x) / f"{y}.webp"
+            path.parent.mkdir(parents=True, exist_ok=True)
+            tile.save(path, quality=88, method=6)
+            count += 1
+    return count
+
+
+def main() -> None:
+    total = 0
+    for zoom in ZOOMS:
+        image, x0, x1, y0, y1 = render_zoom(zoom)
+        count = write_tiles(image, zoom, x0, x1, y0, y1)
+        total += count
+        print(f"Wrote z{zoom} tiles x{x0}-{x1 - 1}, y{y0}-{y1 - 1} ({count} tiles)")
+    print(f"Wrote {total} relief tiles to {OUT_DIR}")
 
 
 if __name__ == "__main__":

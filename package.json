@@ -4,6 +4,7 @@
   "private": true,
   "scripts": {
     "preview": "python3 -m http.server 5173",
+    "bake:relief": "python3 scripts/bake_relief.py",
     "deploy:preview": "npx vercel@44.0.0 --yes",
     "deploy:prod": "npx vercel@44.0.0 --prod --yes"
   }

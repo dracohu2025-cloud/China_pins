@@ -1,5 +1,7 @@
 const CHINA_BOUNDS = [[97, 20.5], [123, 45]];
 const HOME_PADDING = { top: 96, bottom: 96, left: 42, right: 42 };
+const RELIEF_TILE_BOUNDS = [67.5, 16.63619, 140.625, 55.77657];
+const RELIEF_TILES = "tiles/relief/{z}/{x}/{y}.webp";
 const DEM_TILES = "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png";
 const DEM_BOUNDS = [73, 17, 135, 54];
 
@@ -55,11 +57,14 @@ async function getJson(url) {
   return response.json();
 }
 
-function addReliefImage() {
+function addReliefTiles() {
   map.addSource("relief-cn", {
-    type: "image",
-    url: "assets/china-relief-baked.webp",
-    coordinates: [[67.5, 55.77657], [140.625, 55.77657], [140.625, 16.63619], [67.5, 16.63619]]
+    type: "raster",
+    tiles: [RELIEF_TILES],
+    tileSize: 256,
+    minzoom: 2,
+    maxzoom: 6,
+    bounds: RELIEF_TILE_BOUNDS
   });
   map.addLayer({
     id: "relief-cn-img",
@@ -67,7 +72,7 @@ function addReliefImage() {
     source: "relief-cn",
     paint: {
       "raster-fade-duration": 0,
-      "raster-opacity": ["interpolate", ["linear"], ["zoom"], 3.8, 1, 4.8, .72, 5.6, 0]
+      "raster-opacity": ["interpolate", ["linear"], ["zoom"], 2.4, .95, 5.2, .9, 7.2, .42, 8.5, 0]
     }
   });
 }
@@ -533,7 +538,7 @@ function drawMist() {
 
 map.on("load", async () => {
   try {
-    addReliefImage();
+    addReliefTiles();
     const [china, outline, rivers, lakes, journey, poemData] = await Promise.all([
       getJson("geo/100000_full.json"),
       getJson("geo/china-outline.json"),

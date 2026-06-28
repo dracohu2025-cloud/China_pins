@@ -1,6 +1,6 @@
-# 东坡行旅图
+# 山河行旅图
 
-一个可复用的山河叙事地图模板。当前示例把苏轼生平节点、代表作品和诗句落到真实中国地图上。
+一个可复用的山河叙事地图模板。当前示例把苏轼、李白的生平节点、代表作品和诗句落到真实中国地图上。
 
 ## 运行
 
@@ -35,36 +35,40 @@ npm run deploy:prod
 
 ## 数据结构
 
-叙事数据在 `data/sushi-journey.json`：
+叙事数据在 `data/sushi-journey.json` 和 `data/libai-journey.json`：
 
+- `id`：人物数据集 ID
+- `heading`：地图标题
+- `types`：当前人物的分类标签与颜色
 - `name`：地点名
 - `short`：竖牌短名
 - `years`：时间段
-- `type`：分类，当前支持 `origin`、`office`、`exile`、`final`
+- `type`：分类，对应当前人物 `types` 中的键
 - `lnglat`：真实经纬度
 - `summary`：地点事件说明
 - `quote`：代表诗句
 - `works`：相关作品
+- `poem`：全文诗词库中的作品标题
 - `importance`：全国视角显示优先级
 
-替换这份 JSON，就可以做李白、杜甫、丝绸之路、茶马古道等其他主题。
+诗词全文集中在 `data/poems.json`。新增人物时，增加一份 journey JSON 并在前端注册即可。
 
 ## 图层结构
 
 - MapLibre GL JS 负责地图渲染和交互
-- `assets/china-relief-baked.webp` 是用公开 Terrarium DEM 瓦片烘焙的经纬度配准中国地形底图
+- `tiles/relief/{z}/{x}/{y}.webp` 是用公开 Terrarium DEM 瓦片烘焙的中国地形 raster tiles
 - `geo/100000_full.json` 和 `geo/china-outline.json` 提供真实中国边界
 - `geo/ne_50m_rivers_cn.json`、`geo/ne_50m_lakes_cn.json` 提供水系
 - DOM Marker 负责竖牌地点标注
 - GeoJSON LineString 负责生平路线和当前进度路线
 
-## 烘焙 relief 图
+## 烘焙 relief 瓦片
 
 ```bash
-python3 scripts/bake_relief.py
+npm run bake:relief
 ```
 
-脚本会下载 AWS Open Data 的 Terrarium DEM 瓦片到 `.cache/terrarium/`，输出 `assets/china-relief-baked.webp`。
+脚本会下载 AWS Open Data 的 Terrarium DEM 瓦片到 `.cache/terrarium/`，输出 `tiles/relief/{z}/{x}/{y}.webp`。当前中国范围预烘焙 `z2-z6`，MapLibre 会按当前视野懒加载可见瓦片。
 
 数据来源：
 

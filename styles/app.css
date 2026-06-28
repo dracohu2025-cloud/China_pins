@@ -261,6 +261,14 @@ button {
   color: #f8ead2;
 }
 
+.person-switch.loading {
+  pointer-events: none;
+}
+
+.person-switch.loading .person-tab {
+  opacity: .58;
+}
+
 .filter {
   min-width: 68px;
   height: 36px;

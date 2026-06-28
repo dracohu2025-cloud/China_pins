@@ -1,0 +1,21 @@
+{
+  "default": "sushi",
+  "people": [
+    {
+      "id": "sushi",
+      "label": "东坡",
+      "name": "苏轼",
+      "era": "北宋",
+      "region": "中国",
+      "path": "data/sushi-journey.json"
+    },
+    {
+      "id": "libai",
+      "label": "太白",
+      "name": "李白",
+      "era": "盛唐",
+      "region": "中国",
+      "path": "data/libai-journey.json"
+    }
+  ]
+}

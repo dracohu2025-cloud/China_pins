@@ -8,10 +8,12 @@ const DEM_BOUNDS = [73, 17, 135, 54];
 let points = [];
 let markers = [];
 let journeys = {};
+let peopleCatalog = [];
 let poems = {};
 let activeJourney = null;
 let activeIndex = 0;
 let currentFilter = "all";
+let loadingJourneyId = "";
 
 const map = new maplibregl.Map({
   container: "map",
@@ -456,9 +458,52 @@ function renderSearchResults(query) {
   });
 }
 
-function setJourney(journeyId, flyHome = true) {
-  const nextJourney = journeys[journeyId];
-  if (!nextJourney || activeJourney?.id === journeyId) return;
+async function loadJourney(journeyId) {
+  if (journeys[journeyId]) return journeys[journeyId];
+  const person = peopleCatalog.find((item) => item.id === journeyId);
+  if (!person) throw new Error(`未知人物：${journeyId}`);
+  const journey = await getJson(person.path);
+  journeys[journey.id] = journey;
+  return journey;
+}
+
+function renderPersonSwitch() {
+  const switcher = document.getElementById("personSwitch");
+  switcher.replaceChildren(...peopleCatalog.map((person) => {
+    const button = document.createElement("button");
+    button.className = "person-tab";
+    button.type = "button";
+    button.dataset.journey = person.id;
+    button.textContent = person.label;
+    button.title = `${person.name} · ${person.era}`;
+    return button;
+  }));
+}
+
+function updatePersonTabs(journeyId) {
+  document.querySelectorAll(".person-tab").forEach((button) => {
+    button.classList.toggle("on", button.dataset.journey === journeyId);
+  });
+}
+
+async function setJourney(journeyId, flyHome = true) {
+  if (loadingJourneyId || activeJourney?.id === journeyId) return;
+  const switcher = document.getElementById("personSwitch");
+  loadingJourneyId = journeyId;
+  switcher.classList.add("loading");
+  try {
+    const nextJourney = await loadJourney(journeyId);
+    if (!nextJourney) return;
+    applyJourney(nextJourney, flyHome);
+  } catch (error) {
+    console.error(error);
+  } finally {
+    loadingJourneyId = "";
+    switcher.classList.remove("loading");
+  }
+}
+
+function applyJourney(nextJourney, flyHome = true) {
   if (!document.getElementById("poemModal").hidden) closePoemModal();
   activeJourney = nextJourney;
   points = nextJourney.points;
@@ -471,9 +516,7 @@ function setJourney(journeyId, flyHome = true) {
   renderMarkers();
   map.getSource("journey-route").setData(makeRoute());
   renderTimeline();
-  document.querySelectorAll(".person-tab").forEach((button) => {
-    button.classList.toggle("on", button.dataset.journey === journeyId);
-  });
+  updatePersonTabs(nextJourney.id);
   updateFilter("all");
   selectPoint(0, false);
   if (flyHome) fitHome();
@@ -505,8 +548,9 @@ function wireControls() {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && !document.getElementById("poemModal").hidden) closePoemModal();
   });
-  document.querySelectorAll(".person-tab").forEach((button) => {
-    button.addEventListener("click", () => setJourney(button.dataset.journey));
+  document.getElementById("personSwitch").addEventListener("click", (event) => {
+    const button = event.target.closest(".person-tab");
+    if (button) setJourney(button.dataset.journey);
   });
   map.on("zoom", () => {
     const showFlags = map.getZoom() >= 4.4;
@@ -555,20 +599,20 @@ function drawMist() {
 map.on("load", async () => {
   try {
     addReliefTiles();
-    const [china, outline, rivers, lakes, journey, poemData] = await Promise.all([
+    const [china, outline, rivers, lakes, peopleIndex, poemData] = await Promise.all([
       getJson("geo/100000_full.json"),
       getJson("geo/china-outline.json"),
       getJson("geo/ne_50m_rivers_cn.json"),
       getJson("geo/ne_50m_lakes_cn.json"),
-      Promise.all([
-        getJson("data/sushi-journey.json"),
-        getJson("data/libai-journey.json")
-      ]),
+      getJson("data/people/index.json"),
       getJson("data/poems.json")
     ]);
     poems = poemData;
-    journeys = Object.fromEntries(journey.map((item) => [item.id, item]));
-    activeJourney = journeys.sushi;
+    peopleCatalog = peopleIndex.people || [];
+    const defaultJourneyId = peopleIndex.default || peopleCatalog[0]?.id;
+    if (!defaultJourneyId) throw new Error("缺少默认人物数据");
+    renderPersonSwitch();
+    activeJourney = await loadJourney(defaultJourneyId);
     points = activeJourney.points;
     addChinaLayers(china);
     addMask(outline);
@@ -579,6 +623,7 @@ map.on("load", async () => {
     renderFilters();
     renderMarkers();
     renderTimeline();
+    updatePersonTabs(activeJourney.id);
     wireControls();
     drawMist();
     fitHome(0);

@@ -35,6 +35,8 @@ npm run deploy:prod
 
 ## 数据结构
 
+人物索引在 `data/people/index.json`，首页启动时只加载索引和默认人物。点击人物切换后，前端会按 `path` 懒加载对应的 journey JSON。
+
 叙事数据在 `data/sushi-journey.json` 和 `data/libai-journey.json`：
 
 - `id`：人物数据集 ID
@@ -51,7 +53,7 @@ npm run deploy:prod
 - `poem`：全文诗词库中的作品标题
 - `importance`：全国视角显示优先级
 
-诗词全文集中在 `data/poems.json`。新增人物时，增加一份 journey JSON 并在前端注册即可。
+诗词全文集中在 `data/poems.json`。新增人物时，增加一份 journey JSON，并把人物元信息与文件路径写入 `data/people/index.json` 即可。
 
 ## 图层结构
 

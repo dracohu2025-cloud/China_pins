@@ -13,7 +13,6 @@ let peopleCatalog = [];
 let poems = {};
 let activeJourney = null;
 let activeIndex = 0;
-let currentFilter = "all";
 let loadingJourneyId = "";
 
 const map = new maplibregl.Map({
@@ -325,20 +324,6 @@ function renderTitle() {
   document.getElementById("searchInput").placeholder = activeJourney.searchPlaceholder;
 }
 
-function renderFilters() {
-  const filters = document.getElementById("filters");
-  const buttons = [
-    `<button class="filter on" type="button" data-filter="all">全部</button>`,
-    ...Object.entries(activeJourney.types).map(([type, meta]) => (
-      `<button class="filter" type="button" data-filter="${type}">${meta.label}</button>`
-    ))
-  ];
-  filters.innerHTML = buttons.join("");
-  filters.querySelectorAll(".filter").forEach((button) => {
-    button.addEventListener("click", () => updateFilter(button.dataset.filter));
-  });
-}
-
 function renderTimeline() {
   const timeline = document.getElementById("timeline");
   timeline.innerHTML = points.map((point, index) => `
@@ -353,23 +338,6 @@ function renderTimeline() {
   timeline.querySelectorAll("li").forEach((item) => {
     item.addEventListener("click", () => selectPoint(Number(item.dataset.index), true));
   });
-}
-
-function updateFilter(filter) {
-  currentFilter = filter;
-  document.querySelectorAll(".filter").forEach((button) => {
-    button.classList.toggle("on", button.dataset.filter === filter);
-  });
-  markers.forEach(({ point, el }) => {
-    const visible = filter === "all" || point.type === filter;
-    el.classList.toggle("dim", !visible);
-  });
-  document.querySelectorAll(".timeline li").forEach((item) => {
-    const point = points[Number(item.dataset.index)];
-    item.hidden = !(filter === "all" || point.type === filter);
-  });
-  const visible = visibleIndices();
-  if (!visible.includes(activeIndex) && visible.length) selectPoint(visible[0], true);
 }
 
 function selectPoint(index, fly) {
@@ -432,20 +400,8 @@ function closePoemModal() {
   document.getElementById("poemOpen").focus();
 }
 
-function visibleIndices() {
-  return points
-    .map((point, index) => ({ point, index }))
-    .filter(({ point }) => currentFilter === "all" || point.type === currentFilter)
-    .map(({ index }) => index);
-}
-
 function selectAdjacent(direction) {
-  const list = visibleIndices();
-  if (!list.length) return;
-  const current = list.indexOf(activeIndex);
-  const next = current < 0
-    ? list[0]
-    : list[(current + direction + list.length) % list.length];
+  const next = (activeIndex + direction + points.length) % points.length;
   selectPoint(next, true);
 }
 
@@ -484,7 +440,6 @@ function renderSearchResults(query) {
   panel.querySelectorAll("button").forEach((button) => {
     button.addEventListener("click", () => {
       const index = Number(button.dataset.index);
-      updateFilter("all");
       selectPoint(index, true);
       panel.hidden = true;
     });
@@ -540,16 +495,13 @@ function applyJourney(nextJourney, flyHome = true) {
   activeJourney = nextJourney;
   points = nextJourney.points;
   activeIndex = 0;
-  currentFilter = "all";
   document.getElementById("searchInput").value = "";
   renderSearchResults("");
   renderTitle();
-  renderFilters();
   renderMarkers();
   map.getSource("journey-route").setData(makeRoute());
   renderTimeline();
   updatePersonSelect(nextJourney.id);
-  updateFilter("all");
   selectPoint(0, false);
   if (flyHome) fitHome();
 }
@@ -651,7 +603,6 @@ map.on("load", async () => {
     addTerrainSources();
     addRouteLayer();
     renderTitle();
-    renderFilters();
     renderMarkers();
     renderTimeline();
     updatePersonSelect(activeJourney.id);
@@ -659,7 +610,6 @@ map.on("load", async () => {
     drawMist();
     fitHome(0);
     selectPoint(0, false);
-    updateFilter("all");
     map.once("render", () => window.setTimeout(setLoaderHidden, 180));
   } catch (error) {
     document.querySelector("#loader strong").textContent = "载入失败";

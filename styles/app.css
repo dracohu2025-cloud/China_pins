@@ -88,7 +88,6 @@ button {
   letter-spacing: 2px;
 }
 
-.filter,
 .story-actions button,
 .poem-open {
   border: 1px solid var(--gold-soft);
@@ -98,17 +97,10 @@ button {
   transition: transform .18s ease, background .18s ease, border-color .18s ease;
 }
 
-.filter:hover,
 .story-actions button:hover,
 .poem-open:hover {
   transform: translateY(-1px);
   border-color: var(--gold);
-}
-
-.filter.on {
-  background: linear-gradient(180deg, #a43b24, #862916);
-  color: #f8ead2;
-  border-color: #862916;
 }
 
 .search {
@@ -231,32 +223,6 @@ button {
   color: #765d33;
   font-size: 12px;
   line-height: 1.5;
-}
-
-.filters {
-  position: absolute;
-  left: 50%;
-  bottom: 28px;
-  z-index: 8;
-  display: flex;
-  gap: 8px;
-  max-width: calc(100vw - 32px);
-  padding: 7px;
-  transform: translateX(-50%);
-  border: 1px solid var(--gold-soft);
-  border-radius: 999px;
-  background: rgba(246, 236, 214, .82);
-  box-shadow: var(--shadow);
-  backdrop-filter: blur(10px);
-}
-
-.filter {
-  min-width: 68px;
-  height: 36px;
-  padding: 0 14px;
-  border-radius: 999px;
-  font: 700 14px/1 "Kaiti SC", "STKaiti", "KaiTi", serif;
-  letter-spacing: 2px;
 }
 
 .story {
@@ -698,12 +664,6 @@ button {
   .story {
     left: 12px;
     bottom: 278px;
-    width: calc(100vw - 24px);
-  }
-  .filters {
-    bottom: 20px;
-    overflow-x: auto;
-    justify-content: flex-start;
     width: calc(100vw - 24px);
   }
 }

@@ -499,39 +499,38 @@ async function loadJourney(journeyId) {
   return journey;
 }
 
-function renderPersonSwitch() {
-  const switcher = document.getElementById("personSwitch");
-  switcher.replaceChildren(...peopleCatalog.map((person) => {
-    const button = document.createElement("button");
-    button.className = "person-tab";
-    button.type = "button";
-    button.dataset.journey = person.id;
-    button.textContent = person.label;
-    button.title = `${person.name} · ${person.era}`;
-    return button;
+function renderPersonSelect() {
+  const select = document.getElementById("personSelect");
+  select.replaceChildren(...peopleCatalog.map((person) => {
+    const option = document.createElement("option");
+    option.value = person.id;
+    option.textContent = `${person.name} · ${person.label}`;
+    return option;
   }));
 }
 
-function updatePersonTabs(journeyId) {
-  document.querySelectorAll(".person-tab").forEach((button) => {
-    button.classList.toggle("on", button.dataset.journey === journeyId);
-  });
+function updatePersonSelect(journeyId) {
+  document.getElementById("personSelect").value = journeyId;
 }
 
 async function setJourney(journeyId, flyHome = true) {
   if (loadingJourneyId || activeJourney?.id === journeyId) return;
-  const switcher = document.getElementById("personSwitch");
+  const search = document.querySelector(".search");
+  const select = document.getElementById("personSelect");
   loadingJourneyId = journeyId;
-  switcher.classList.add("loading");
+  search.classList.add("loading");
+  select.disabled = true;
   try {
     const nextJourney = await loadJourney(journeyId);
     if (!nextJourney) return;
     applyJourney(nextJourney, flyHome);
   } catch (error) {
     console.error(error);
+    updatePersonSelect(activeJourney?.id || "");
   } finally {
     loadingJourneyId = "";
-    switcher.classList.remove("loading");
+    select.disabled = false;
+    search.classList.remove("loading");
   }
 }
 
@@ -548,7 +547,7 @@ function applyJourney(nextJourney, flyHome = true) {
   renderMarkers();
   map.getSource("journey-route").setData(makeRoute());
   renderTimeline();
-  updatePersonTabs(nextJourney.id);
+  updatePersonSelect(nextJourney.id);
   updateFilter("all");
   selectPoint(0, false);
   if (flyHome) fitHome();
@@ -580,9 +579,8 @@ function wireControls() {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape" && !document.getElementById("poemModal").hidden) closePoemModal();
   });
-  document.getElementById("personSwitch").addEventListener("click", (event) => {
-    const button = event.target.closest(".person-tab");
-    if (button) setJourney(button.dataset.journey);
+  document.getElementById("personSelect").addEventListener("change", (event) => {
+    setJourney(event.target.value);
   });
   map.on("zoom", () => {
     const showFlags = map.getZoom() >= 4.4;
@@ -643,7 +641,7 @@ map.on("load", async () => {
     peopleCatalog = peopleIndex.people || [];
     const defaultJourneyId = peopleIndex.default || peopleCatalog[0]?.id;
     if (!defaultJourneyId) throw new Error("缺少默认人物数据");
-    renderPersonSwitch();
+    renderPersonSelect();
     activeJourney = await loadJourney(defaultJourneyId);
     points = activeJourney.points;
     addChinaLayers(china);
@@ -655,7 +653,7 @@ map.on("load", async () => {
     renderFilters();
     renderMarkers();
     renderTimeline();
-    updatePersonTabs(activeJourney.id);
+    updatePersonSelect(activeJourney.id);
     wireControls();
     drawMist();
     fitHome(0);

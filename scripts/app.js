@@ -1,4 +1,4 @@
-const CHINA_BOUNDS = [[97, 20.5], [123, 45]];
+const DEFAULT_BOUNDS = [[97, 20.5], [123, 45]];
 const HOME_PADDING = { top: 96, bottom: 96, left: 42, right: 42 };
 const CHINA_RELIEF_TILE_BOUNDS = [67.5, 16.63619, 140.625, 55.77657];
 const RELIEF_TILES = "tiles/relief/{z}/{x}/{y}.webp";
@@ -39,12 +39,41 @@ const map = new maplibregl.Map({
 map.addControl(new maplibregl.NavigationControl({ visualizePitch: true }), "top-right");
 
 function fitHome(duration = 700) {
-  map.fitBounds(CHINA_BOUNDS, {
+  map.fitBounds(homeBounds(), {
     padding: HOME_PADDING,
     pitch: 0,
     bearing: 0,
     duration
   });
+}
+
+function homeBounds() {
+  if (activeJourney?.bounds) return activeJourney.bounds;
+  const routePoints = activeJourney?.points || points;
+  if (!routePoints.length) return DEFAULT_BOUNDS;
+
+  const lngs = routePoints.map((point) => point.lnglat[0]);
+  const lats = routePoints.map((point) => point.lnglat[1]);
+  let west = Math.min(...lngs);
+  let east = Math.max(...lngs);
+  let south = Math.min(...lats);
+  let north = Math.max(...lats);
+
+  if (west === east) {
+    west -= 1;
+    east += 1;
+  }
+  if (south === north) {
+    south -= 1;
+    north += 1;
+  }
+
+  const lngPad = Math.max((east - west) * 0.14, 1.2);
+  const latPad = Math.max((north - south) * 0.14, 1.2);
+  return [
+    [Math.max(-180, west - lngPad), Math.max(-85, south - latPad)],
+    [Math.min(180, east + lngPad), Math.min(85, north + latPad)]
+  ];
 }
 
 function setLoaderHidden() {

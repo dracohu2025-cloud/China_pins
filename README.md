@@ -52,6 +52,7 @@ npm run deploy:prod
 - `works`：相关作品
 - `poem`：全文诗词库中的作品标题
 - `importance`：全国视角显示优先级
+- `bounds`：可选，人物首页视野；缺省时前端会根据 `points` 自动计算
 
 诗词全文集中在 `data/poems.json`。新增人物时，增加一份 journey JSON，并把人物元信息与文件路径写入 `data/people/index.json` 即可。
 

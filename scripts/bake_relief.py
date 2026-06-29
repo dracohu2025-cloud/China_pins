@@ -22,7 +22,7 @@ GLOBAL_ZOOMS = range(0, 4)
 REGIONAL_ZOOMS = range(4, 7)
 TILE_SIZE = 256
 GLOBAL_BOUNDS = (-180.0, MAX_MERCATOR_LAT, 180.0, -MAX_MERCATOR_LAT)
-REGIONAL_BOUNDS = (67.5, 55.77657301866769, 140.625, 16.636191878397664)
+REGIONAL_BOUNDS = (56.25, 55.77657301866769, 140.625, 16.636191878397664)
 TERRARIUM_URL = "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png"
 NATURAL_EARTH_LAND_URL = (
     "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/"

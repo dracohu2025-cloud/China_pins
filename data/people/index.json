@@ -16,6 +16,14 @@
       "era": "盛唐",
       "region": "中国",
       "path": "data/libai-journey.json"
+    },
+    {
+      "id": "genghis",
+      "label": "成吉思汗",
+      "name": "铁木真",
+      "era": "蒙古帝国",
+      "region": "欧亚",
+      "path": "data/genghis-journey.json"
     }
   ]
 }

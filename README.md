@@ -37,7 +37,7 @@ npm run deploy:prod
 
 人物索引在 `data/people/index.json`，首页启动时只加载索引和默认人物。点击人物切换后，前端会按 `path` 懒加载对应的 journey JSON。
 
-叙事数据在 `data/sushi-journey.json` 和 `data/libai-journey.json`：
+叙事数据在 `data/sushi-journey.json`、`data/libai-journey.json` 和 `data/genghis-journey.json`：
 
 - `id`：人物数据集 ID
 - `heading`：地图标题

@@ -1,7 +1,7 @@
 const DEFAULT_BOUNDS = [[97, 20.5], [123, 45]];
 const HOME_PADDING = { top: 96, bottom: 96, left: 42, right: 42 };
-const CHINA_RELIEF_TILE_BOUNDS = [67.5, 16.63619, 140.625, 55.77657];
-const RELIEF_VERSION = "20260628-korea";
+const REGIONAL_RELIEF_TILE_BOUNDS = [56.25, 16.63619, 140.625, 55.77657];
+const RELIEF_VERSION = "20260629-genghis";
 const RELIEF_TILES = `tiles/relief/{z}/{x}/{y}.webp?v=${RELIEF_VERSION}`;
 const DEM_TILES = "https://s3.amazonaws.com/elevation-tiles-prod/terrarium/{z}/{x}/{y}.png";
 const DEM_BOUNDS = [73, 17, 135, 54];
@@ -102,7 +102,7 @@ function addReliefTiles() {
     tileSize: 256,
     minzoom: 4,
     maxzoom: 6,
-    bounds: CHINA_RELIEF_TILE_BOUNDS
+    bounds: REGIONAL_RELIEF_TILE_BOUNDS
   });
   map.addLayer({
     id: "relief-global-img",
